@@ -1,0 +1,44 @@
+services:
+  chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      - PORT=3005
+      - REDIS_URL=redis://redis:6379
+      - ADMIN_TOKEN=synset_admin_2026
+      - WEBHOOK_URL=https://n8n.synsetsolutions.com/webhook/nuevo-lead
+    ports:
+      - "3006:3005"
+    depends_on:
+      - redis
+    networks:
+      - chatbot_net
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - chatbot_net
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    restart: unless-stopped
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    networks:
+      - chatbot_net
+
+networks:
+  chatbot_net:
+    driver: bridge
+
+volumes:
+  redis_data:
+  redisinsight_data:
