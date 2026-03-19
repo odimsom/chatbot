@@ -145,7 +145,12 @@ async function handleChat(req, res) {
             case STEPS.STEP_LEAD_CORREO:
                 if (isValidEmail(message_text)) {
                     lead.email = message_text;
-                    reply = "Casi listo! ¿Cuál es el principal desafío operativo de tu negocio?\n(Ej: control de caja, ventas, etc.)";
+                    reply = "Casi listo! ¿En qué área específica necesitas más ayuda?\n\n" +
+                            "1️⃣ Control de ventas e inventario\n" +
+                            "2️⃣ Automatizar flujos de trabajo\n" +
+                            "3️⃣ Creación de Tableros (KPIs)\n" +
+                            "4️⃣ Chatbots y Asistentes\n" +
+                            "5️⃣ Otro distinto";
                     nextStep = STEPS.STEP_LEAD_DESAFIO;
                 } else {
                     reply = "Por favor ingresa un correo electrónico válido (ej: tucorreo@gmail.com)";
@@ -154,15 +159,35 @@ async function handleChat(req, res) {
                 break;
 
             case STEPS.STEP_LEAD_DESAFIO:
-                if (!message_text) {
-                    reply = "¿Cuál es el principal desafío operativo de tu negocio?";
+                const isOp1 = input === '1' || input === '1.' || input === 'uno';
+                const isOp2 = input === '2' || input === '2.' || input === 'dos';
+                const isOp3 = input === '3' || input === '3.' || input === 'tres';
+                const isOp4 = input === '4' || input === '4.' || input === 'cuatro';
+                const isOp5 = input === '5' || input === '5.' || input === 'cinco';
+
+                if (isOp1) lead.desafio = "Control de ventas e inventario";
+                else if (isOp2) lead.desafio = "Automatizar flujos de trabajo";
+                else if (isOp3) lead.desafio = "Creación de Tableros (KPIs)";
+                else if (isOp4) lead.desafio = "Chatbots y Asistentes";
+                else if (isOp5) lead.desafio = "Otro distinto";
+                else {
+                    reply = "Por favor selecciona una opción válida (1 al 5) 👇\n\n" +
+                            "1️⃣ Control de ventas e inventario\n" +
+                            "2️⃣ Automatizar flujos de trabajo\n" +
+                            "3️⃣ Creación de Tableros (KPIs)\n" +
+                            "4️⃣ Chatbots y Asistentes\n" +
+                            "5️⃣ Otro distinto";
                     nextStep = STEPS.STEP_LEAD_DESAFIO;
-                } else if (message_text.length > 300) {
-                    reply = "Por favor resume tu desafío en menos palabras 😊 (máximo 300 caracteres)";
-                    nextStep = STEPS.STEP_LEAD_DESAFIO;
+                    break;
+                }
+
+                lead.phone = phone;
+
+                if (isOp5) {
+                    reply = 
+                        `✅ *Gracias ${lead.nombre}!* Hemos recibido tu información.\n\n` +
+                        `Como tu caso es particular, un asesor revisará tu solicitud manualmente y se pondrá en contacto contigo por este medio. 🚀`;
                 } else {
-                    lead.desafio = message_text;
-                    lead.phone = phone;
                     reply =
                         `✅ *Perfecto ${lead.nombre}!*\n\n` +
                         `Hemos recibido tu info:\n` +
@@ -170,16 +195,16 @@ async function handleChat(req, res) {
                         `💼 Desafío: ${lead.desafio}\n\n` +
                         `⏳ Estamos buscando el espacio más cercano en nuestra agenda...\n` +
                         `En unos segundos recibirás la confirmación automática de tu auditoría gratuita. 🚀`;
-                    responseLead = { ...lead };
-
-                    console.log(JSON.stringify({ type: 'lead_captured', phone, lead }));
-
-                    await sendLeadWebhook(phone, lead);
-
-                    await stateService.setCooldown(phone);
-                    await stateService.clearUserState(phone);
-                    nextStep = null;
                 }
+
+                responseLead = { ...lead, requiresManualReview: isOp5 };
+                console.log(JSON.stringify({ type: 'lead_captured', phone, lead, manual: isOp5 }));
+
+                await sendLeadWebhook(phone, lead);
+
+                await stateService.setCooldown(phone);
+                await stateService.clearUserState(phone);
+                nextStep = null;
                 break;
 
             default:
