@@ -35,6 +35,7 @@ async function handleChat(req, res) {
         if (await stateService.isDuplicate(messageId)) return res.json({ reply: null });
         if (!phone) return res.status(400).json({ error: 'phone is required' });
         if (phone.endsWith('@g.us')) return res.json({ reply: null });
+        if (phone.endsWith('@lid')) return res.json({ reply: null });
         if (await stateService.isInHumanMode(phone)) return res.json({ reply: null });
         if (await stateService.isInCooldown(phone)) return res.json({ reply: null });
 
