@@ -7,6 +7,24 @@ const PORT = process.env.PORT || 3005;
 
 // In-memory state: Map<phone, { step: string, lastActivity: number, timeoutId: NodeJS.Timeout, lead: object }>
 const userStates = new Map();
+
+// Human mode: Set<phone> — phones where human has taken over
+const humanMode = new Set();
+
+// Deduplication: Map<messageId, timestamp>
+const processedMessages = new Map();
+const DEDUP_TTL = 60 * 1000; // 1 minute
+
+function isDuplicate(messageId) {
+    if (!messageId) return false;
+    if (processedMessages.has(messageId)) return true;
+    processedMessages.set(messageId, Date.now());
+    // Cleanup old entries
+    for (const [id, ts] of processedMessages.entries()) {
+        if (Date.now() - ts > DEDUP_TTL) processedMessages.delete(id);
+    }
+    return false;
+}
 const TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 const STEPS = {
@@ -57,19 +75,41 @@ function isValidEmail(email) {
 }
 
 app.post('/chat', (req, res) => {
-    let { phone, message, fromMe } = req.body;
-    
-    // VALIDACIONES GLOBALES
+    let { phone, message, fromMe, messageId } = req.body;
+
+    // Ignore own messages
     if (fromMe === true) {
+        // Check for human mode commands from the operator
+        const msg = (message || '').trim().toLowerCase();
+        if (msg === '!humano' && phone) {
+            humanMode.add(phone);
+            return res.json({ reply: null, humanMode: true });
+        }
+        if (msg === '!bot' && phone) {
+            humanMode.delete(phone);
+            clearUserState(phone);
+            return res.json({ reply: null, humanMode: false });
+        }
+        return res.json({ reply: null });
+    }
+
+    // Deduplication
+    if (isDuplicate(messageId)) {
         return res.json({ reply: null });
     }
 
     if (!phone) {
         return res.status(400).json({ error: 'phone is required' });
     }
-    
+
+    // Ignore groups
     if (phone.endsWith('@g.us')) {
         return res.json({ reply: "Este bot solo funciona en chats privados 😊" });
+    }
+
+    // Human mode — bot stays silent
+    if (humanMode.has(phone)) {
+        return res.json({ reply: null });
     }
 
     message = (message || '').trim();
