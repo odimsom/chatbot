@@ -168,10 +168,8 @@ async function handleChat(req, res) {
                         `Hemos recibido tu info:\n` +
                         `📧 ${lead.email}\n` +
                         `💼 Desafío: ${lead.desafio}\n\n` +
-                        `Un asesor te contactará pronto.\n\n` +
-                        `Puedes agendar aquí:\n` +
-                        `📅 https://calendly.com/synsetsolutions\n\n` +
-                        `¡Gracias! 🚀`;
+                        `⏳ Estamos buscando el espacio más cercano en nuestra agenda...\n` +
+                        `En unos segundos recibirás la confirmación automática de tu auditoría gratuita. 🚀`;
                     responseLead = { ...lead };
 
                     console.log(JSON.stringify({ type: 'lead_captured', phone, lead }));
