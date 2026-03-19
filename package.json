@@ -1,0 +1,13 @@
+{
+  "name": "synset-chatbot-service",
+  "version": "1.0.0",
+  "description": "Synset Solutions WhatsApp Chatbot State Manager",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
