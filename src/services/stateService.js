@@ -8,7 +8,8 @@ const PREFIXES = {
     STATE: 'state:',
     HUMAN: 'human:',
     COOLDOWN: 'cooldown:',
-    MSG: 'msg:'
+    MSG: 'msg:',
+    LEAD: 'lead:'
 };
 
 const STEPS = {
@@ -19,7 +20,10 @@ const STEPS = {
     STEP_FAQ: 'STEP_FAQ',
     STEP_LEAD_NOMBRE: 'STEP_LEAD_NOMBRE',
     STEP_LEAD_CORREO: 'STEP_LEAD_CORREO',
-    STEP_LEAD_DESAFIO: 'STEP_LEAD_DESAFIO'
+    STEP_LEAD_DESAFIO: 'STEP_LEAD_DESAFIO',
+    STEP_LEAD_SLOT: 'STEP_LEAD_SLOT',       // Nuevo: elegir horario
+    STEP_SCHEDULED_MENU: 'STEP_SCHEDULED_MENU', // Nuevo: menú usuario agendado
+    STEP_REAGENDAR: 'STEP_REAGENDAR'        // Nuevo: reagendar cita
 };
 
 async function isDuplicate(messageId) {
@@ -76,6 +80,18 @@ async function clearCooldown(phone) {
     await redisClient.del(PREFIXES.COOLDOWN + phone);
 }
 
+// Guardar lead persistente (sobrevive cooldown para saludos personalizados)
+async function saveLeadData(phone, lead) {
+    await redisClient.set(PREFIXES.LEAD + phone, JSON.stringify(lead), { EX: 7 * 24 * 60 * 60 }); // 7 días
+}
+
+// Recuperar lead para saludos personalizados durante cooldown
+async function getLeadData(phone) {
+    const data = await redisClient.get(PREFIXES.LEAD + phone);
+    if (!data) return null;
+    try { return JSON.parse(data); } catch { return null; }
+}
+
 module.exports = {
     STEPS,
     isDuplicate,
@@ -87,5 +103,7 @@ module.exports = {
     isInHumanMode,
     setHumanMode,
     clearHumanMode,
-    clearCooldown
+    clearCooldown,
+    saveLeadData,
+    getLeadData
 };
