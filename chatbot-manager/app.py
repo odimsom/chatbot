@@ -82,6 +82,7 @@ def toggle():
     current_status = data.get("current_status") # "BOT" or "HUMANO"
     
     command = "!humano" if current_status == "BOT" else "!bot"
+    print(f"[MANAGER] Toggling {phone}: {current_status} -> {command}")
     
     try:
         # Notify n8n if configured
@@ -101,8 +102,16 @@ def toggle():
             json={"command": command, "phone": phone},
             timeout=5
         )
-        return jsonify({"success": resp.status_code == 200, "new_status": "HUMANO" if command == "!humano" else "BOT"})
+        
+        print(f"[MANAGER] Chatbot Response ({resp.status_code}): {resp.text}")
+        
+        return jsonify({
+            "success": resp.status_code == 200, 
+            "new_status": "HUMANO" if command == "!humano" else "BOT",
+            "api_response": resp.json() if resp.status_code == 200 else resp.text
+        })
     except Exception as e:
+        print(f"[MANAGER] ERROR: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
