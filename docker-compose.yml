@@ -42,7 +42,7 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379
       - CHATBOT_API_URL=http://chatbot:3005
-      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - ADMIN_TOKEN=synset_admin_2026
       - FLASK_PORT=8089
     ports:
       - "8089:8089"
