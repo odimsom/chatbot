@@ -146,7 +146,7 @@ async function handleChat(req, res) {
             const currentStep = currentState.step;
             const input = message_text.toLowerCase();
 
-            // Si ya está en el submenú de agendado, seguir manejando esas opciones
+            // Submenús propios del usuario agendado
             if (currentStep === stateService.STEPS.STEP_SCHEDULED_MENU) {
                 return handleScheduledMenu(phone, input, currentState, res);
             }
@@ -154,19 +154,22 @@ async function handleChat(req, res) {
                 return handleReagendar(phone, input, currentState, res);
             }
 
-            // Primera vez que escribe estando en cooldown → saludo personalizado
-            const savedLead = await stateService.getLeadData(phone);
-            const nombre = savedLead?.nombre || 'amigo/a';
+            // STEP_0 o sin estado → saludo personalizado
+            if (!currentStep || currentStep === stateService.STEPS.STEP_0) {
+                const savedLead = await stateService.getLeadData(phone);
+                const nombre = savedLead?.nombre || 'amigo/a';
+                await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_SCHEDULED_MENU, lead: {} });
+                return res.json({
+                    reply:
+                        `Hola ${nombre}! 😊 ¿En qué puedo ayudarte hoy?\n\n` +
+                        `1️⃣ Ver menú principal\n` +
+                        `2️⃣ Reagendar mi cita\n` +
+                        `3️⃣ Actualizar datos de mi cita`
+                });
+            }
 
-            await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_SCHEDULED_MENU, lead: currentState.lead || {} });
-
-            return res.json({
-                reply:
-                    `Hola ${nombre}! 😊 ¿En qué puedo ayudarte hoy?\n\n` +
-                    `1️⃣ Ver menú principal\n` +
-                    `2️⃣ Reagendar mi cita\n` +
-                    `3️⃣ Actualizar datos de mi cita`
-            });
+            // Cualquier otro step (STEP_1, STEP_SERVICIOS, etc.): dejar navegar normalmente
+            // el bloque principal del switch lo maneja — no bloqueamos la navegación
         }
         // ─────────────────────────────────────────────────────────────────────
 
@@ -401,8 +404,9 @@ async function handleScheduledMenu(phone, input, currentState, res) {
     const isOption3 = input === '3' || input === '3.' || input === 'tres';
 
     if (isOption1) {
-        // Mostrar menú principal (pero dentro de cooldown, solo menú info)
-        await stateService.clearUserState(phone);
+        // Mostrar menú principal — guardar STEP_1 para que el usuario pueda navegar
+        // sin que el cooldown lo intercepte con el saludo otra vez
+        await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_1, lead: {} });
         return res.json({ reply: MENU_PRINCIPAL });
     }
 
