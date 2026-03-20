@@ -46,6 +46,10 @@ def logout():
     session.pop("logged_in", None)
     return redirect(url_for("login"))
 
+@app.route("/favicon.ico")
+def favicon():
+    return redirect("https://img.icons8.com/plasticine/100/bot.png")
+
 @app.route("/")
 @login_required
 def index():
