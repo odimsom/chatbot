@@ -163,8 +163,8 @@ async function handleChat(req, res) {
                     reply:
                         `Hola ${nombre}! 😊 ¿En qué puedo ayudarte hoy?\n\n` +
                         `1️⃣ Ver menú principal\n` +
-                        `2️⃣ Reagendar mi cita\n` +
-                        `3️⃣ Actualizar datos de mi cita`
+                        `2️⃣ Reagendar mi cita (la hora no me conviene)\n` +
+                        `3️⃣ Hablar con un asesor (dudas o cambios)`
                 });
             }
 
@@ -426,24 +426,17 @@ async function handleScheduledMenu(phone, input, currentState, res) {
     }
 
     if (isOption3) {
-        // Solicitar actualización de datos (manual)
-        await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_SCHEDULED_MENU, lead: currentState.lead });
+        // Pausar bot y esperar por humano
+        await stateService.setHumanMode(phone);
+        await stateService.clearUserState(phone);
         return res.json({
-            reply:
-                "✏️ Para actualizar los datos de tu cita escríbenos directamente aquí " +
-                "o llámanos al *+1 (829) 693-2458* y con gusto te ayudamos. 🙌"
+            reply: "Entendido. He pasado tu consulta a un asesor para que te atienda personalmente. Puedes escribir tus dudas o cambios aquí mismo. 🚀"
         });
     }
 
     // Opción no reconocida
-    const savedLead = await stateService.getLeadData(phone);
-    const nombre = savedLead?.nombre || 'amigo/a';
     return res.json({
-        reply:
-            `Hola ${nombre}! 😊 ¿En qué puedo ayudarte hoy?\n\n` +
-            `1️⃣ Ver menú principal\n` +
-            `2️⃣ Reagendar mi cita\n` +
-            `3️⃣ Actualizar datos de mi cita`
+        reply: "No entendí tu respuesta 🤔. Por favor elige una opción del menú:\n\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Hablar con un asesor"
     });
 }
 
