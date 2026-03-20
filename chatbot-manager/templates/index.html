@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Synset | Chatbot Manager</title>
+    <link rel="icon" href="https://img.icons8.com/plasticine/100/bot.png" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -53,7 +54,7 @@
             -webkit-text-fill-color: transparent;
         }
 
-        .refresh-btn {
+        .refresh-btn, .logout-btn {
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.1);
             color: var(--text);
@@ -61,8 +62,13 @@
             border-radius: 8px;
             cursor: pointer;
             transition: all 0.2s;
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
         }
-        .refresh-btn:hover { background: rgba(255,255,255,0.1); }
+        .refresh-btn:hover, .logout-btn:hover { background: rgba(255,255,255,0.1); }
+        .logout-btn { color: #f87171; border-color: rgba(248, 113, 113, 0.2); }
 
         .leads-grid {
             display: grid;
@@ -136,7 +142,10 @@
     <div class="container">
         <header>
             <h1>Synset Solutions | Chatbot Manager</h1>
-            <button class="refresh-btn" onclick="location.reload()">🔄 Actualizar</button>
+            <div style="display: flex; gap: 0.5rem;">
+                <button class="refresh-btn" onclick="location.reload()">🔄 Actualizar</button>
+                <a href="/logout" class="logout-btn">🔴 Salir</a>
+            </div>
         </header>
 
         <div class="leads-grid" id="leadsGrid">
