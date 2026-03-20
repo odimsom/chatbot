@@ -163,8 +163,8 @@ async function handleChat(req, res) {
                 const nombre = savedLead?.nombre || 'amigo/a';
                 await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_SCHEDULED_MENU, lead: {} });
                 const greeting = savedLead && savedLead.nombre 
-                    ? `¡Hola ${savedLead.nombre}! 👋 Veo que tienes una gestión pendiente con nosotros.\n\n¿Qué deseas hacer?\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos / Nuevo reto\n4️⃣ Hablar con un asesor (se pausará el bot 🖥️)`
-                    : `¡Hola! 👋 Veo que tienes una gestión pendiente con nosotros.\n\n¿Qué deseas hacer?\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos / Nuevo reto\n4️⃣ Hablar con un asesor (se pausará el bot 🖥️)`;
+                    ? `¡Hola ${savedLead.nombre}! 👋 Veo que tienes una gestión pendiente con nosotros.\n\n¿Qué deseas hacer?\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos / Nuevo reto\n4️⃣ Hablar con un asesor`
+                    : `¡Hola! 👋 Veo que tienes una gestión pendiente con nosotros.\n\n¿Qué deseas hacer?\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos / Nuevo reto\n4️⃣ Hablar con un asesor`;
                 
                 return res.json({ reply: greeting });
             }
@@ -464,7 +464,7 @@ async function handleScheduledMenu(phone, input, currentState, res) {
                "1️⃣ Ver menú principal\n" +
                "2️⃣ Reagendar cita\n" +
                "3️⃣ Actualizar datos / Nuevo reto\n" +
-               "4️⃣ Hablar con un asesor (se pausará el bot 🖥️)"
+               "4️⃣ Hablar con un asesor"
     });
 }
 
