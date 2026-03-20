@@ -122,7 +122,18 @@ async function handleChat(req, res) {
         if (fromMe === true) return res.json({ reply: null });
         if (await stateService.isDuplicate(messageId)) return res.json({ reply: null });
         if (!phone) return res.status(400).json({ error: 'phone is required' });
-        if (phone.endsWith('@g.us')) return res.json({ reply: null });
+
+        // Grupos: solo responder si el bot fue mencionado
+        const isGroup = phone.endsWith('@g.us');
+        if (isGroup) {
+            if (req.body.isGroupMention) {
+                return res.json({
+                    reply: "🤖 Hola! Soy el asistente de *Synset Solutions*. Solo puedo atender conversaciones privadas.\nEscríbeme directo para ayudarte. 😊"
+                });
+            }
+            return res.json({ reply: null });
+        }
+
         if (phone.endsWith('@lid')) return res.json({ reply: null });
         if (await stateService.isInHumanMode(phone)) return res.json({ reply: null });
 
@@ -301,16 +312,13 @@ async function handleChat(req, res) {
                 lead.phone = phone;
 
                 if (isOp5) {
-                    // Caso manual: no agendar, solo registrar
-                    lead.requiresManualReview = true;
-                    lead.source = 'whatsapp';
-                    responseLead = { ...lead };
-
+                    // Caso manual: NO agendar, NO llamar webhook de n8n
+                    // El asesor contactará manualmente
                     reply =
                         `✅ *Gracias ${lead.nombre}!* Hemos recibido tu información.\n\n` +
-                        `Como tu caso es particular, un asesor revisará tu solicitud y se pondrá en contacto contigo. 🚀`;
+                        `Como tu caso es particular, un asesor revisará tu solicitud y se pondrá en contacto contigo por este medio.\n\n` +
+                        `⏳ Te contactaremos pronto. 🙌`;
 
-                    await sendLeadWebhook(phone, lead);
                     await stateService.saveLeadData(phone, lead);
                     await stateService.setCooldown(phone);
                     await stateService.clearUserState(phone);

@@ -1,5 +1,5 @@
 {
-  "name": "Synset - WhatsApp Chatbot v6 + Landing",
+  "name": "Synset - WhatsApp Chatbot v6.1 + Landing",
   "nodes": [
     {
       "parameters": {
@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const results = [];\nfor (const item of $input.all()) {\n  const payload = item.json?.body?.payload;\n  if (!payload) continue;\n  \n  const isMessage = item.json.body.event === 'message';\n  const isNotGroup = !(payload.from || '').endsWith('@g.us');\n  const isNotMe = payload.fromMe === false;\n  const hasTextBody = payload.body && payload.body.trim() !== '';\n  \n  if (!isMessage || !isNotGroup || !isNotMe || !hasTextBody) continue;\n  \n  let phone = payload.from;\n  if (phone && phone.endsWith('@lid')) {\n    const alt = payload._data?.key?.remoteJidAlt;\n    if (alt) phone = alt;\n  }\n  \n  results.push({\n    json: {\n      phone: phone,\n      message: payload.body,\n      fromMe: payload.fromMe,\n      messageId: payload.id\n    }\n  });\n}\nreturn results;"
+        "jsCode": "const results = [];\nconst BOT_PHONE = $vars.BOT_PHONE || '';\n\nfor (const item of $input.all()) {\n  const payload = item.json?.body?.payload;\n  if (!payload) continue;\n\n  const isMessage = item.json.body.event === 'message';\n  const isNotMe = payload.fromMe === false;\n  const hasTextBody = payload.body && payload.body.trim() !== '';\n  if (!isMessage || !isNotMe || !hasTextBody) continue;\n\n  const isGroup = (payload.from || '').endsWith('@g.us');\n\n  // Detectar si el bot fue mencionado en el grupo\n  if (isGroup) {\n    const mentioned = payload.mentionedJidList || payload._data?.mentionedJidList || [];\n    const botMentioned = (BOT_PHONE && mentioned.some(j => j.includes(BOT_PHONE)))\n      || mentioned.length > 0; // si hay cualquier mención asumimos que puede ser al bot\n    if (!botMentioned) continue; // ignorar mensajes de grupo sin mención\n\n    results.push({\n      json: {\n        phone: payload.from,\n        message: payload.body,\n        fromMe: payload.fromMe,\n        messageId: payload.id,\n        isGroupMention: true\n      }\n    });\n    continue;\n  }\n\n  // Mensajes privados normales\n  let phone = payload.from;\n  if (phone && phone.endsWith('@lid')) {\n    const alt = payload._data?.key?.remoteJidAlt;\n    if (alt) phone = alt;\n  }\n\n  results.push({\n    json: {\n      phone: phone,\n      message: payload.body,\n      fromMe: payload.fromMe,\n      messageId: payload.id\n    }\n  });\n}\nreturn results;"
       },
       "name": "Filtrar y Normalizar",
       "type": "n8n-nodes-base.code",
@@ -53,7 +53,8 @@
             { "name": "phone", "value": "={{ $json.phone }}" },
             { "name": "message", "value": "={{ $json.message }}" },
             { "name": "fromMe", "value": "={{ $json.fromMe }}" },
-            { "name": "messageId", "value": "={{ $json.messageId }}" }
+            { "name": "messageId", "value": "={{ $json.messageId }}" },
+            { "name": "isGroupMention", "value": "={{ $json.isGroupMention || false }}" }
           ]
         },
         "options": {}
