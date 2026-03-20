@@ -35,6 +35,23 @@ services:
     networks:
       - chatbot_net
 
+  manager:
+    build:
+      context: ./chatbot-manager
+    restart: unless-stopped
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - CHATBOT_API_URL=http://chatbot:3005
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
+      - FLASK_PORT=8089
+    ports:
+      - "8089:8089"
+    depends_on:
+      - redis
+      - chatbot
+    networks:
+      - chatbot_net
+
 networks:
   chatbot_net:
     driver: bridge
