@@ -162,15 +162,11 @@ async function handleChat(req, res) {
                 const savedLead = await stateService.getLeadData(phone);
                 const nombre = savedLead?.nombre || 'amigo/a';
                 await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_SCHEDULED_MENU, lead: {} });
-                return res.json({
-                    reply:
-                        `Hola ${nombre}! 👋 Ya tienes una cita o un ticket de revisión abierto con nosotros.\n\n` +
-                        `¿Qué deseas hacer?\n` +
-                        `1️⃣ Ver menú principal / Cancelar cita\n` +
-                        `2️⃣ Reagendar mi cita (la hora no me conviene)\n` +
-                        `3️⃣ Actualizar mis datos / Nuevo reto\n` +
-                        `4️⃣ Hablar con un asesor (pausar bot)`
-                });
+                const greeting = savedLead && savedLead.nombre 
+                    ? `¡Hola ${savedLead.nombre}! 👋 Veo que tienes una gestión pendiente con nosotros.\n\n¿Qué deseas hacer?\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos / Nuevo reto\n4️⃣ Hablar con un asesor (se pausará el bot 🖥️)`
+                    : `¡Hola! 👋 Veo que tienes una gestión pendiente con nosotros.\n\n¿Qué deseas hacer?\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos / Nuevo reto\n4️⃣ Hablar con un asesor (se pausará el bot 🖥️)`;
+                
+                return res.json({ reply: greeting });
             }
 
             // Cualquier otro step (STEP_1, STEP_SERVICIOS, etc.): dejar navegar normalmente
@@ -464,8 +460,11 @@ async function handleScheduledMenu(phone, input, currentState, res) {
 
     // Opción no reconocida
     return res.json({
-        reply: "No entendí tu respuesta 🤔. Por favor elige una opción del menú:\n" +
-               "1️⃣ Menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos\n4️⃣ Hablar con un asesor"
+        reply: "No entendí tu respuesta 🤔. Por favor elige una opción del menú:\n\n" +
+               "1️⃣ Ver menú principal\n" +
+               "2️⃣ Reagendar cita\n" +
+               "3️⃣ Actualizar datos / Nuevo reto\n" +
+               "4️⃣ Hablar con un asesor (se pausará el bot 🖥️)"
     });
 }
 
