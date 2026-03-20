@@ -153,6 +153,9 @@ async function handleChat(req, res) {
             if (currentStep === stateService.STEPS.STEP_REAGENDAR) {
                 return handleReagendar(phone, input, currentState, res);
             }
+            if (currentStep === stateService.STEPS.STEP_CONFIRM_UPDATE) {
+                return handleConfirmUpdate(phone, input, currentState, res);
+            }
 
             // STEP_0 o sin estado → saludo personalizado
             if (!currentStep || currentStep === stateService.STEPS.STEP_0) {
@@ -161,10 +164,12 @@ async function handleChat(req, res) {
                 await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_SCHEDULED_MENU, lead: {} });
                 return res.json({
                     reply:
-                        `Hola ${nombre}! 😊 ¿En qué puedo ayudarte hoy?\n\n` +
-                        `1️⃣ Ver menú principal\n` +
+                        `Hola ${nombre}! 👋 Ya tienes una cita o un ticket de revisión abierto con nosotros.\n\n` +
+                        `¿Qué deseas hacer?\n` +
+                        `1️⃣ Ver menú principal / Cancelar cita\n` +
                         `2️⃣ Reagendar mi cita (la hora no me conviene)\n` +
-                        `3️⃣ Hablar con un asesor (dudas o cambios)`
+                        `3️⃣ Actualizar mis datos / Nuevo reto\n` +
+                        `4️⃣ Hablar con un asesor (pausar bot)`
                 });
             }
 
@@ -402,12 +407,14 @@ async function handleScheduledMenu(phone, input, currentState, res) {
     const isOption1 = input === '1' || input === '1.' || input === 'uno';
     const isOption2 = input === '2' || input === '2.' || input === 'dos';
     const isOption3 = input === '3' || input === '3.' || input === 'tres';
+    const isOption4 = input === '4' || input === '4.' || input === 'cuatro';
 
     if (isOption1) {
         // Mostrar menú principal — guardar STEP_1 para que el usuario pueda navegar
-        // sin que el cooldown lo intercepte con el saludo otra vez
         await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_1, lead: {} });
-        return res.json({ reply: MENU_PRINCIPAL });
+        return res.json({ 
+            reply: "Entendido. Para cancelar tu cita escríbenos aquí mismo o selecciona una opción del menú.\n\n" + MENU_PRINCIPAL 
+        });
     }
 
     if (isOption2) {
@@ -426,6 +433,14 @@ async function handleScheduledMenu(phone, input, currentState, res) {
     }
 
     if (isOption3) {
+        // ¿Actualizar nombre/correo?
+        await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_CONFIRM_UPDATE, lead: currentState.lead || {} });
+        return res.json({
+            reply: "¿Deseas actualizar tu nombre y correo electrónico? 👤\n\n1️⃣ Sí, actualizar todo\n2️⃣ No, solo el nuevo reto"
+        });
+    }
+
+    if (isOption4) {
         // Pausar bot y esperar por humano
         await stateService.setHumanMode(phone);
         await stateService.clearUserState(phone);
@@ -436,7 +451,36 @@ async function handleScheduledMenu(phone, input, currentState, res) {
 
     // Opción no reconocida
     return res.json({
-        reply: "No entendí tu respuesta 🤔. Por favor elige una opción del menú:\n\n1️⃣ Ver menú principal\n2️⃣ Reagendar cita\n3️⃣ Hablar con un asesor"
+        reply: "No entendí tu respuesta 🤔. Por favor elige una opción del menú:\n" +
+               "1️⃣ Menú principal\n2️⃣ Reagendar cita\n3️⃣ Actualizar datos\n4️⃣ Hablar con un asesor"
+    });
+}
+
+async function handleConfirmUpdate(phone, input, currentState, res) {
+    const isOption1 = input === '1' || input === '1.' || input === 'uno' || input === 'si' || input === 'sí';
+    const isOption2 = input === '2' || input === '2.' || input === 'dos' || input === 'no';
+
+    if (isOption1) {
+        // Reiniciar flujo de lead desde el nombre
+        await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_LEAD_NOMBRE, lead: {} });
+        return res.json({ reply: "¡Genial! Vamos a actualizar tus datos 🙌\n\n¿Cuál es tu nombre?" });
+    }
+
+    if (isOption2) {
+        // Ir directo al desafío (reto)
+        await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_LEAD_DESAFIO, lead: currentState.lead || {} });
+        return res.json({
+            reply: "Entendido, mantenemos los datos actuales. ✅\n\n¿En qué área específica necesitas más ayuda hoy?\n\n" +
+                   "1️⃣ Control de ventas e inventario\n" +
+                   "2️⃣ Automatizar flujos de trabajo\n" +
+                   "3️⃣ Creación de Tableros (KPIs)\n" +
+                   "4️⃣ Chatbots y Asistentes\n" +
+                   "5️⃣ Otro distinto"
+        });
+    }
+
+    return res.json({
+        reply: "Por favor selecciona una opción válida:\n1️⃣ Sí, actualizar nombre/correo\n2️⃣ No, solo el nuevo reto"
     });
 }
 
