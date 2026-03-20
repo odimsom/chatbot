@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synset | Chatbot Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.3);
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            background-image: radial-gradient(circle at 50% -20%, #1e293b, #0f172a);
+            color: var(--text);
+            margin: 0;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 3rem;
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+            background: linear-gradient(to right, #60a5fa, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .refresh-btn {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .refresh-btn:hover { background: rgba(255,255,255,0.1); }
+
+        .leads-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent);
+            box-shadow: 0 10px 30px -10px var(--accent-glow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+
+        .badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.25rem 0.6rem;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+        .badge-bot { background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-human { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .name { font-size: 1.1rem; font-weight: 600; margin: 0 0 0.25rem 0; }
+        .phone { font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1.5rem; }
+
+        .toggle-btn {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+        .toggle-btn:hover { filter: brightness(1.2); }
+        .toggle-btn.is-human { background: var(--warning); color: #000; }
+        .toggle-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Synset Solutions | Chatbot Manager</h1>
+            <button class="refresh-btn" onclick="location.reload()">🔄 Actualizar</button>
+        </header>
+
+        <div class="leads-grid" id="leadsGrid">
+            {% for lead in leads %}
+            <div class="card" id="card-{{ lead.phone }}">
+                <div class="loading-overlay" id="loading-{{ lead.phone }}">⏳</div>
+                <div class="card-header">
+                    <div>
+                        <p class="name">{{ lead.name }}</p>
+                        <p class="phone">{{ lead.phone }}</p>
+                    </div>
+                    <span class="badge {{ 'badge-human' if lead.is_human else 'badge-bot' }}" id="badge-{{ lead.phone }}">
+                        {{ lead.status }}
+                    </span>
+                </div>
+                
+                <button class="toggle-btn {{ 'is-human' if lead.is_human else '' }}" 
+                        id="btn-{{ lead.phone }}"
+                        onclick="toggleStatus('{{ lead.phone }}')">
+                    {{ 'Pasar a BOT 🤖' if lead.is_human else 'Pasar a HUMANO 👤' }}
+                </button>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        async function toggleStatus(phone) {
+            const badge = document.getElementById(`badge-${phone}`);
+            const btn = document.getElementById(`btn-${phone}`);
+            const loader = document.getElementById(`loading-${phone}`);
+            const currentStatus = badge.textContent.trim();
+
+            loader.style.display = 'flex';
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/toggle', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, current_status: currentStatus })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    const isNowHuman = result.new_status === 'HUMANO';
+                    badge.className = `badge ${isNowHuman ? 'badge-human' : 'badge-bot'}`;
+                    badge.textContent = result.new_status;
+                    
+                    btn.className = `toggle-btn ${isNowHuman ? 'is-human' : ''}`;
+                    btn.textContent = isNowHuman ? 'Pasar a BOT 🤖' : 'Pasar a HUMANO 👤';
+                } else {
+                    alert('Error: ' + (result.error || 'No se pudo cambiar el estado'));
+                }
+            } catch (err) {
+                alert('Error de conexión');
+            } finally {
+                loader.style.display = 'none';
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

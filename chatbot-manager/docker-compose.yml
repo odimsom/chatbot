@@ -1,0 +1,13 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8089:8089"
+    environment:
+      - FLASK_PORT=8089
+      - REDIS_URL=redis://host.docker.internal:6379 
+      - CHATBOT_API_URL=https://chatbot.synsetsolutions.com
+      - ADMIN_TOKEN=synset_admin_2026
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: always
