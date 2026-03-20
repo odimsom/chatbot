@@ -273,20 +273,27 @@ async function handleChat(req, res) {
                     nextStep = STEPS.STEP_LEAD_NOMBRE;
                 } else {
                     lead.nombre = message_text;
-                    reply = `Gracias, ${lead.nombre}! 😊\n¿Cuál es tu correo electrónico?`;
+                    reply = `Gracias, ${lead.nombre}! 😊\n¿Cuál es tu correo electrónico? 📧\n\n*(Escribe *Volver* si quieres corregir tu nombre)*`;
                     nextStep = STEPS.STEP_LEAD_CORREO;
                 }
                 break;
 
             case STEPS.STEP_LEAD_CORREO:
+                if (message_text.toLowerCase() === 'volver') {
+                    reply = "¿Cuál es tu nombre? 👤";
+                    nextStep = STEPS.STEP_LEAD_NOMBRE;
+                    break;
+                }
+
                 if (isValidEmail(message_text)) {
                     lead.email = message_text;
-                    reply = "Casi listo! ¿En qué área específica necesitas más ayuda?\n\n" +
+                    reply = "¡Casi listo! ¿En qué área específica necesitas más ayuda? 🚀\n\n" +
                             "1️⃣ Control de ventas e inventario\n" +
                             "2️⃣ Automatizar flujos de trabajo\n" +
                             "3️⃣ Creación de Tableros (KPIs)\n" +
                             "4️⃣ Chatbots y Asistentes\n" +
-                            "5️⃣ Otro distinto";
+                            "5️⃣ Otro distinto\n\n" +
+                            "*(Escribe *Volver* si quieres corregir tu correo)*";
                     nextStep = STEPS.STEP_LEAD_DESAFIO;
                 } else {
                     reply = "Por favor ingresa un correo electrónico válido (ej: tucorreo@gmail.com)";
@@ -295,6 +302,12 @@ async function handleChat(req, res) {
                 break;
 
             case STEPS.STEP_LEAD_DESAFIO: {
+                if (message_text.toLowerCase() === 'volver') {
+                    reply = "¿Cuál es tu correo electrónico? 📧\n\n*(Escribe *Volver* si quieres corregir tu nombre)*";
+                    nextStep = STEPS.STEP_LEAD_CORREO;
+                    break;
+                }
+
                 const isOp1 = input === '1' || input === '1.' || input === 'uno';
                 const isOp2 = input === '2' || input === '2.' || input === 'dos';
                 const isOp3 = input === '3' || input === '3.' || input === 'tres';
@@ -470,12 +483,13 @@ async function handleConfirmUpdate(phone, input, currentState, res) {
         // Ir directo al desafío (reto)
         await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_LEAD_DESAFIO, lead: currentState.lead || {} });
         return res.json({
-            reply: "Entendido, mantenemos los datos actuales. ✅\n\n¿En qué área específica necesitas más ayuda hoy?\n\n" +
+            reply: "Entendido, mantenemos los datos actuales. ✅\n\n¿En qué área específica necesitas más ayuda hoy? 🚀\n\n" +
                    "1️⃣ Control de ventas e inventario\n" +
                    "2️⃣ Automatizar flujos de trabajo\n" +
                    "3️⃣ Creación de Tableros (KPIs)\n" +
                    "4️⃣ Chatbots y Asistentes\n" +
-                   "5️⃣ Otro distinto"
+                   "5️⃣ Otro distinto\n\n" +
+                   "*(Escribe *Volver* si quieres cambiar de opinión y actualizar tu nombre/correo)*"
         });
     }
 
