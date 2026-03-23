@@ -137,8 +137,6 @@ async function handleChat(req, res) {
             }
             return res.json({ reply: null });
         }
-
-        if (phone.endsWith('@lid')) return res.json({ reply: null });
         if (await stateService.isInHumanMode(phone)) return res.json({ reply: null });
 
         const message_text = (message || '').trim();
