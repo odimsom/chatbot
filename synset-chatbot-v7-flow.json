@@ -119,17 +119,8 @@
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "session", "value": "default" },
-            { "name": "chatId", "value": "={{ $('Filtrar y Normalizar').item.json.phone }}" },
-            { "name": "text", "value": "={{ $json.reply }}" },
-            {
-              "name": "buttons",
-              "value": "={{ $json.buttons.map(b => ({ reply: { id: b.id, title: b.text } })) }}"
-            }
-          ]
-        },
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $('Filtrar y Normalizar').item.json.phone, text: $json.reply, buttons: $json.buttons }) }}",
         "options": {}
       },
       "name": "Enviar Botones WAHA",

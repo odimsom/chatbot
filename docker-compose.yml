@@ -9,12 +9,11 @@ services:
       - REDIS_URL=redis://redis:6379
       - ADMIN_TOKEN=6RgbpOXLQRiMBfcaa9dmJmZalMwVKWudzcaGvgeb4F7
       - WEBHOOK_URL=https://n8n.synsetsolutions.com/webhook/nuevo-lead
-    ports:
-      - "3006:3005"
     depends_on:
       - redis
     networks:
       - chatbot_net
+      - dokploy-network
 
   redis:
     image: redis:7-alpine
@@ -44,8 +43,6 @@ services:
       - CHATBOT_API_URL=http://chatbot:3005
       - ADMIN_TOKEN=6RgbpOXLQRiMBfcaa9dmJmZalMwVKWudzcaGvgeb4F7
       - FLASK_PORT=8089
-    ports:
-      - "8089:8089"
     depends_on:
       - redis
       - chatbot
@@ -55,6 +52,8 @@ services:
 networks:
   chatbot_net:
     driver: bridge
+  dokploy-network:
+    external: true
 
 volumes:
   redis_data:
