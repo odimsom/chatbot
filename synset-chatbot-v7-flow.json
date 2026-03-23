@@ -120,7 +120,7 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $('Filtrar y Normalizar').item.json.phone, text: $json.reply, buttons: $json.buttons }) }}",
+        "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $('Filtrar y Normalizar').item.json.phone, body: $json.reply, buttons: $json.buttons.map(b => ({ type: 'reply', id: b.id.toString(), text: b.text })) }) }}",
         "options": {}
       },
       "name": "Enviar Botones WAHA",
