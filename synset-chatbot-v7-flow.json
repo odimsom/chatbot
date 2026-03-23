@@ -1,0 +1,391 @@
+{
+  "name": "Synset - WhatsApp Chatbot v7.0 + Buttons + Persistence",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "waha",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook WAHA",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "landing-lead",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook Landing",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [220, 560]
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\nconst BOT_PHONE = $vars.BOT_PHONE || '';\n\nfor (const item of $input.all()) {\n  const payload = item.json?.body?.payload;\n  if (!payload) continue;\n\n  const isMessage = item.json.body.event === 'message';\n  const isNotMe = payload.fromMe === false;\n  const hasTextBody = payload.body && payload.body.trim() !== '';\n  if (!isMessage || !isNotMe || !hasTextBody) continue;\n\n  const isGroup = (payload.from || '').endsWith('@g.us');\n\n  // Detectar si el bot fue mencionado en el grupo\n  if (isGroup) {\n    const mentioned = payload.mentionedJidList || payload._data?.mentionedJidList || [];\n    const botMentioned = (BOT_PHONE && mentioned.some(j => j.includes(BOT_PHONE)))\n      || mentioned.length > 0; // si hay cualquier mención asumimos que puede ser al bot\n    if (!botMentioned) continue; // ignorar mensajes de grupo sin mención\n\n    results.push({\n      json: {\n        phone: payload.from,\n        message: payload.body,\n        fromMe: payload.fromMe,\n        messageId: payload.id,\n        isGroupMention: true\n      }\n    });\n    continue;\n  }\n\n  // Mensajes privados normales\n  let phone = payload.from;\n  if (phone && phone.endsWith('@lid')) {\n    const alt = payload._data?.key?.remoteJidAlt;\n    if (alt) phone = alt;\n  }\n\n  results.push({\n    json: {\n      phone: phone,\n      message: payload.body,\n      fromMe: payload.fromMe,\n      messageId: payload.id\n    }\n  });\n}\nreturn results;"
+      },
+      "name": "Filtrar y Normalizar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst lead = body.lead || body;\n\nlet phone = (lead.phone || lead.whatsapp || lead.telefono || '').replace(/[^0-9]/g, '');\nif (phone && !phone.includes('@')) {\n  phone = `${phone}@s.whatsapp.net`;\n}\n\nreturn [{\n  json: {\n    lead: {\n      nombre: lead.nombre || lead.name || '',\n      email: lead.email || '',\n      desafio: lead.desafio || lead.mensaje || lead.message || '',\n      phone: phone,\n      source: 'web'\n    }\n  }\n}];"
+      },
+      "name": "Normalizar Lead Landing",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [440, 560]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://chatbot.synsetsolutions.com/chat",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "phone", "value": "={{ $json.phone }}" },
+            { "name": "message", "value": "={{ $json.message }}" },
+            { "name": "fromMe", "value": "={{ $json.fromMe }}" },
+            { "name": "messageId", "value": "={{ $json.messageId }}" },
+            { "name": "isGroupMention", "value": "={{ $json.isGroupMention || false }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Chatbot API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "reply-check",
+              "leftValue": "={{ $json.reply !== null && $json.reply !== undefined && $json.reply !== '' }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Tiene reply?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "button-check",
+              "leftValue": "={{ Array.isArray($json.buttons) && $json.buttons.length > 0 }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Tiene botones?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wahan8n.synsetsolutions.com/api/sendButtons",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session", "value": "default" },
+            { "name": "chatId", "value": "={{ $('Filtrar y Normalizar').item.json.phone }}" },
+            { "name": "text", "value": "={{ $json.reply }}" },
+            {
+              "name": "buttons",
+              "value": "={{ $json.buttons.map(b => ({ reply: { id: b.id, title: b.text } })) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Enviar Botones WAHA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1320, 80]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wahan8n.synsetsolutions.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session", "value": "default" },
+            { "name": "chatId", "value": "={{ $('Filtrar y Normalizar').item.json.phone }}" },
+            { "name": "text", "value": "={{ $json.reply }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Enviar Texto WAHA",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1320, 280]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "lead-check",
+              "leftValue": "={{ $json.lead !== null && $json.lead !== undefined }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Hay lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "const lead = $input.first().json.lead;\n\nconst phoneClean = (lead.phone || '')\n  .replace('@s.whatsapp.net', '')\n  .replace('@c.us', '');\nconst phoneDisplay = phoneClean ? `+${phoneClean}` : 'No proporcionado';\n\nconst tz = 'America/Santo_Domingo';\n\nfunction toLocalDate(date) {\n  return new Date(date.toLocaleString('en-US', { timeZone: tz }));\n}\n\n// Si el usuario ya eligió un slot desde el chatbot, usarlo directamente\nlet slot;\nif (lead.slotChosen) {\n  slot = new Date(lead.slotChosen);\n} else {\n  // Fallback: calcular el próximo slot hábil automáticamente (leads de web)\n  slot = new Date();\n  slot.setMinutes(0, 0, 0);\n  slot.setHours(slot.getHours() + 1);\n\n  for (let i = 0; i < 200; i++) {\n    const local = toLocalDate(slot);\n    const day = local.getDay();\n    const hour = local.getHours();\n    if (day >= 1 && day <= 5 && hour >= 9 && hour < 17) break;\n    slot.setHours(slot.getHours() + 1);\n    const localCheck = toLocalDate(slot);\n    if (localCheck.getHours() >= 17) {\n      slot.setDate(slot.getDate() + 1);\n      slot.setHours(9, 0, 0, 0);\n    }\n    if (toLocalDate(slot).getDay() === 6) {\n      slot.setDate(slot.getDate() + 2);\n      slot.setHours(9, 0, 0, 0);\n    }\n    if (toLocalDate(slot).getDay() === 0) {\n      slot.setDate(slot.getDate() + 1);\n      slot.setHours(9, 0, 0, 0);\n    }\n  }\n}\n\nconst slotEnd = new Date(slot);\nslotEnd.setHours(slotEnd.getHours() + 1);\n\nfunction formatCalDAV(date) {\n  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';\n}\n\nconst dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];\nconst meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];\nconst localSlot = toLocalDate(slot);\nconst fechaTexto = `${dias[localSlot.getDay()]} ${localSlot.getDate()} de ${meses[localSlot.getMonth()]} a las ${localSlot.getHours()}:00`;\n\nconst uid = `synset-${Date.now()}@synsetsolutions.com`;\n\nconst icsContent = `BEGIN:VCALENDAR\\r\\nVERSION:2.0\\r\\nPRODID:-//Synset Solutions//Chatbot//ES\\r\\nBEGIN:VEVENT\\r\\nUID:${uid}\\r\\nDTSTAMP:${formatCalDAV(new Date())}\\r\\nDTSTART:${formatCalDAV(slot)}\\r\\nDTEND:${formatCalDAV(slotEnd)}\\r\\nSUMMARY:Auditoría Gratuita - ${lead.nombre}\\r\\nDESCRIPTION:Lead desde ${lead.source === 'web' ? 'Web' : 'WhatsApp'}\\\\nTeléfono: ${phoneDisplay}\\\\nEmail: ${lead.email}\\\\nDesafío: ${lead.desafio}\\r\\nORGANIZER:mailto:contact@synsetsolutions.com\\r\\nATTENDEE:mailto:${lead.email}\\r\\nEND:VEVENT\\r\\nEND:VCALENDAR`;\n\nreturn [{\n  json: {\n    lead,\n    uid,\n    icsContent,\n    fechaTexto,\n    phoneDisplay,\n    calendarUrl: `https://cloud.synsetsolutions.com/remote.php/dav/calendars/adminsynset/personal/${uid}.ics`\n  }\n}];"
+      },
+      "name": "Calcular Slot",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1320, 420]
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.calendarUrl }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "text/calendar; charset=utf-8" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/calendar",
+        "body": "={{ $json.icsContent }}",
+        "options": {}
+      },
+      "name": "Crear Evento CalDAV",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1540, 420]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "source-check",
+              "leftValue": "={{ $('Calcular Slot').item.json.lead.source }}",
+              "rightValue": "web",
+              "operator": { "type": "string", "operation": "notEquals" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "name": "Es WhatsApp?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1760, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wahan8n.synsetsolutions.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session", "value": "default" },
+            { "name": "chatId", "value": "={{ $('Calcular Slot').item.json.lead.phone }}" },
+            { "name": "text", "value": "=📅 *¡Cita confirmada, {{ $('Calcular Slot').item.json.lead.nombre }}!*\n\nTu auditoría gratuita está agendada para:\n🗓️ {{ $('Calcular Slot').item.json.fechaTexto }}\n⏱️ Duración: 1 hora\n📍 Videollamada remota\n\nTe contactaremos al {{ $('Calcular Slot').item.json.phoneDisplay }} o a {{ $('Calcular Slot').item.json.lead.email }}\n\n¡Nos vemos pronto! 🚀 *Synset Solutions*" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Confirmar WhatsApp Cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1980, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://wahan8n.synsetsolutions.com/api/sendText",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "session", "value": "default" },
+            { "name": "chatId", "value": "18296932458@c.us" },
+            { "name": "text", "value": "=🔔 *Nuevo Lead Agendado - Synset Solutions*\n\n👤 {{ $('Calcular Slot').item.json.lead.nombre }}\n📱 {{ $('Calcular Slot').item.json.phoneDisplay }}\n📧 {{ $('Calcular Slot').item.json.lead.email }}\n💼 {{ $('Calcular Slot').item.json.lead.desafio }}\n📌 Fuente: {{ $('Calcular Slot').item.json.lead.source === 'web' ? 'Landing Web' : 'WhatsApp' }}\n\n📅 Cita: {{ $('Calcular Slot').item.json.fechaTexto }}\n✅ Evento creado en Nextcloud Calendar\n\n⏸️ Bot en pausa 24h.\nPara tomar control:\n{ \"command\": \"!humano\", \"phone\": \"{{ $('Calcular Slot').item.json.lead.phone }}\" }" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Notificar Asesor WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1980, 420]
+    },
+    {
+      "parameters": {
+        "fromEmail": "contact@synsetsolutions.com",
+        "toEmail": "fcastro@synsetsolutions.com",
+        "subject": "=🔔 Nuevo lead agendado: {{ $('Calcular Slot').item.json.lead.nombre }} - {{ $('Calcular Slot').item.json.fechaTexto }}",
+        "text": "=Se ha agendado una nueva auditoría gratuita automáticamente.\n\nFuente: {{ $('Calcular Slot').item.json.lead.source === 'web' ? 'Landing Web' : 'WhatsApp' }}\n\nDatos del cliente:\nNombre: {{ $('Calcular Slot').item.json.lead.nombre }}\nTeléfono: {{ $('Calcular Slot').item.json.phoneDisplay }}\nEmail: {{ $('Calcular Slot').item.json.lead.email }}\nDesafío: {{ $('Calcular Slot').item.json.lead.desafio }}\n\nFecha de la cita: {{ $('Calcular Slot').item.json.fechaTexto }}\n\nEvento en Nextcloud Calendar:\n{{ $('Calcular Slot').item.json.calendarUrl }}\n\nEl bot está en pausa automática 24h para este contacto.\n\n──────────────────────────────\nSynset Solutions\n🌐 synsetsolutions.com\n📧 contact@synsetsolutions.com\n📱 +1 (829) 693-2458\n──────────────────────────────"
+      },
+      "name": "Email Asesor",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1980, 620]
+    },
+    {
+      "parameters": {
+        "fromEmail": "contact@synsetsolutions.com",
+        "toEmail": "={{ $('Calcular Slot').item.json.lead.email }}",
+        "subject": "=📅 Tu auditoría gratuita está confirmada - Synset Solutions",
+        "text": "=Hola {{ $('Calcular Slot').item.json.lead.nombre }},\n\nTu auditoría operativa gratuita ha sido confirmada. Estos son los detalles:\n\n🗓️ Fecha: {{ $('Calcular Slot').item.json.fechaTexto }}\n⏱️ Duración: 1 hora\n📍 Modalidad: Videollamada remota\n\nEn esta sesión analizaremos tu operación y te presentaremos un plan claro para mejorar tu rentabilidad y control operativo.\n\nSi necesitas reagendar o tienes alguna consulta previa, responde este correo o escríbenos por WhatsApp al +1 (829) 693-2458.\n\n¡Nos vemos pronto!\n\n──────────────────────────────\nSynset Solutions\n🌐 synsetsolutions.com\n📧 contact@synsetsolutions.com\n📱 +1 (829) 693-2458\n🇩🇴 República Dominicana · Remote Work\n──────────────────────────────"
+      },
+      "name": "Email Cliente",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1980, 820]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"status\": \"ok\"}"
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2200, 1000]
+    }
+  ],
+  "connections": {
+    "Webhook WAHA": {
+      "main": [[{ "node": "Filtrar y Normalizar", "type": "main", "index": 0 }]]
+    },
+    "Webhook Landing": {
+      "main": [[{ "node": "Normalizar Lead Landing", "type": "main", "index": 0 }]]
+    },
+    "Filtrar y Normalizar": {
+      "main": [[{ "node": "Chatbot API", "type": "main", "index": 0 }]]
+    },
+    "Normalizar Lead Landing": {
+      "main": [[{ "node": "Calcular Slot", "type": "main", "index": 0 }]]
+    },
+    "Chatbot API": {
+      "main": [[{ "node": "Tiene reply?", "type": "main", "index": 0 }]]
+    },
+    "Tiene reply?": {
+      "main": [
+        [
+          { "node": "Tiene botones?", "type": "main", "index": 0 },
+          { "node": "Hay lead?", "type": "main", "index": 0 }
+        ],
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Tiene botones?": {
+      "main": [
+        [{ "node": "Enviar Botones WAHA", "type": "main", "index": 0 }],
+        [{ "node": "Enviar Texto WAHA", "type": "main", "index": 0 }]
+      ]
+    },
+    "Hay lead?": {
+      "main": [
+        [{ "node": "Calcular Slot", "type": "main", "index": 0 }],
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Calcular Slot": {
+      "main": [[{ "node": "Crear Evento CalDAV", "type": "main", "index": 0 }]]
+    },
+    "Crear Evento CalDAV": {
+      "main": [[
+        { "node": "Es WhatsApp?", "type": "main", "index": 0 },
+        { "node": "Notificar Asesor WhatsApp", "type": "main", "index": 0 },
+        { "node": "Email Asesor", "type": "main", "index": 0 },
+        { "node": "Email Cliente", "type": "main", "index": 0 }
+      ]]
+    },
+    "Es WhatsApp?": {
+      "main": [
+        [{ "node": "Confirmar WhatsApp Cliente", "type": "main", "index": 0 }],
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    },
+    "Confirmar WhatsApp Cliente": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Notificar Asesor WhatsApp": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Email Asesor": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Email Cliente": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Enviar Botones WAHA": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Enviar Texto WAHA": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  }
+}

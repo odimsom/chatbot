@@ -6,14 +6,18 @@ function isValidEmail(email) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-const MENU_PRINCIPAL =
-    "👋 Hola! Soy el asistente de *Synset Solutions*.\n" +
-    "Optimizamos tu negocio con tecnología 🚀\n\n" +
-    "¿Qué deseas hacer?\n" +
-    "1️⃣ Servicios\n" +
-    "2️⃣ Sectores\n" +
-    "3️⃣ Preguntas frecuentes\n" +
-    "4️⃣ Hablar con un asesor";
+const MENU_PRINCIPAL = {
+    text: "👋 Hola! Soy el asistente de *Synset Solutions*.\nOptimizamos tu negocio con tecnología 🚀\n\n¿Qué deseas hacer?",
+    buttons: [
+        { id: "1", text: "🛠️ Servicios" },
+        { id: "2", text: "🏢 Sectores" },
+        { id: "3", text: "❓ FAQ" },
+        { id: "4", text: "👤 Hablar con asesor" }
+    ]
+};
+const MENU_TEXT_FALLBACK = 
+    "👋 Hola! Soy el asistente de *Synset Solutions*.\nOptimizamos tu negocio con tecnología 🚀\n\n" +
+    "1️⃣ Servicios\n2️⃣ Sectores\n3️⃣ Preguntas frecuentes\n4️⃣ Hablar con un asesor";
 
 const DIAS = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
 const MESES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -93,12 +97,12 @@ function formatSlotISO(date) {
  * Construye el mensaje de selección de slots.
  */
 function buildSlotMessage(slots) {
-    let msg = "📅 *Elige el horario que mejor te convenga:*\n\n";
-    slots.forEach((slot, i) => {
-        msg += `${i + 1}️⃣ ${formatSlot(slot)}\n`;
-    });
-    msg += "\nResponde con el número de tu preferencia.";
-    return msg;
+    const text = "📅 *Elige el horario que mejor te convenga:*";
+    const buttons = slots.map((slot, i) => ({
+        id: (i + 1).toString(),
+        text: formatSlot(slot)
+    }));
+    return { text, buttons };
 }
 
 async function sendLeadWebhook(phone, lead) {
@@ -178,6 +182,7 @@ async function handleChat(req, res) {
         let currentStep = currentState.step;
         let lead = currentState.lead || {};
         let reply = '';
+        let buttons = [];
         let responseLead = null;
         let nextStep = currentStep;
 
@@ -191,48 +196,84 @@ async function handleChat(req, res) {
         const STEPS = stateService.STEPS;
 
         switch (currentStep) {
-            case STEPS.STEP_0:
-                reply = MENU_PRINCIPAL;
-                nextStep = STEPS.STEP_1;
+            case STEPS.STEP_0: {
+                const savedLead = await stateService.getLeadData(phone);
+                if (savedLead && savedLead.nombre) {
+                    reply = `¡Hola de nuevo, ${savedLead.nombre}! 👋 ¿Qué deseas hacer hoy?`;
+                    buttons = [
+                        { id: "1", text: "🚀 Menú Principal" },
+                        { id: "4", text: "👤 Hablar con asesor" },
+                        { id: "3", text: "📝 Actualizar Datos" }
+                    ];
+                    nextStep = STEPS.STEP_RESUME_LEAD;
+                } else {
+                    reply = MENU_PRINCIPAL.text;
+                    buttons = MENU_PRINCIPAL.buttons;
+                    nextStep = STEPS.STEP_1;
+                }
+                break;
+            }
+            
+            case STEPS.STEP_RESUME_LEAD:
+                if (isOption1) {
+                    reply = MENU_PRINCIPAL.text;
+                    buttons = MENU_PRINCIPAL.buttons;
+                    nextStep = STEPS.STEP_1;
+                } else if (isOption3) {
+                    reply = "¡Genial! Vamos a actualizar tus datos 🙌\n\n¿Cuál es tu nombre?";
+                    nextStep = STEPS.STEP_LEAD_NOMBRE;
+                } else if (isOption4) {
+                    // Si ya tenemos datos, ir directo al asesor
+                    await stateService.setHumanMode(phone);
+                    await stateService.clearUserState(phone);
+                    reply = `Perfecto ${lead.nombre || ''}. Te conecto con un asesor ahora mismo. 🚀`;
+                    nextStep = null;
+                } else {
+                    reply = "Elige una opción válida:";
+                    buttons = [
+                        { id: "1", text: "🚀 Menú Principal" },
+                        { id: "4", text: "👤 Hablar con asesor" },
+                        { id: "3", text: "📝 Actualizar Datos" }
+                    ];
+                }
                 break;
 
             case STEPS.STEP_1:
                 if (isOption1) {
-                    reply =
-                        "🛠️ *Nuestros Servicios*\n\n" +
-                        "✅ *Control operativo*\n" +
-                        "⚡ *Automatización*\n" +
-                        "📊 *Tableros de KPIs*\n" +
-                        "🤖 *Chatbots 24/7*\n\n" +
-                        "¿Agendamos una auditoría gratuita?\n" +
-                        "1️⃣ Sí, agendar\n" +
-                        "2️⃣ Volver";
+                    reply = "🛠️ *Nuestros Servicios*\n\n✅ Control operativo\n⚡ Automatización\n📊 Tableros de KPIs\n🤖 Chatbots 24/7";
+                    buttons = [
+                        { id: "1", text: "📅 Agendar Auditoría" },
+                        { id: "2", text: "🔙 Volver" }
+                    ];
                     nextStep = STEPS.STEP_SERVICIOS;
                 } else if (isOption2) {
-                    reply =
-                        "🏪 *Sectores que atendemos*\n\n" +
-                        "🛒 *Retail y minimarkets*\n" +
-                        "🏢 *Empresas de servicios*\n\n" +
-                        "¿Hablamos sobre tu negocio?\n" +
-                        "1️⃣ Sí, hablar con asesor\n" +
-                        "2️⃣ Volver";
+                    reply = "🏪 *Sectores que atendemos*\n\n🛒 Retail y minimarkets\n🏢 Empresas de servicios";
+                    buttons = [
+                        { id: "1", text: "👤 Hablar con asesor" },
+                        { id: "2", text: "🔙 Volver" }
+                    ];
                     nextStep = STEPS.STEP_SECTORES;
                 } else if (isOption3) {
-                    reply =
-                        "❓ *Preguntas Frecuentes*\n\n" +
-                        "*¿Empresas pequeñas?* Sí, de todo tamaño.\n" +
-                        "*¿Qué software necesito?* Te asesoramos gratis.\n" +
-                        "*¿Soporte?* Directo y sin intermediarios.\n" +
-                        "*¿Tiempo de implementación?* Ágil y rápido.\n\n" +
-                        "¿Agendamos una auditoría gratuita?\n" +
-                        "1️⃣ Sí, agendar\n" +
-                        "2️⃣ Volver";
+                    reply = "❓ *Preguntas Frecuentes*\n\n*¿Empresas pequeñas?* Sí.\n*¿Software?* Te asesoramos.\n*¿Soporte?* Directo.\n*¿Tiempo?* Ágil.";
+                    buttons = [
+                        { id: "1", text: "📅 Agendar Auditoría" },
+                        { id: "2", text: "🔙 Volver" }
+                    ];
                     nextStep = STEPS.STEP_FAQ;
                 } else if (isOption4) {
-                    reply = "¡Genial! Vamos a conectarte con un asesor 🙌\n\n¿Cuál es tu nombre?";
-                    nextStep = STEPS.STEP_LEAD_NOMBRE;
+                    const savedLead = await stateService.getLeadData(phone);
+                    if (savedLead && savedLead.nombre) {
+                        await stateService.setHumanMode(phone);
+                        await stateService.clearUserState(phone);
+                        reply = `¡Excelente ${savedLead.nombre}! Te paso con un asesor en este momento. 🚀`;
+                        nextStep = null;
+                    } else {
+                        reply = "¡Genial! Vamos a conectarte con un asesor 🙌\n\n¿Cuál es tu nombre?";
+                        nextStep = STEPS.STEP_LEAD_NOMBRE;
+                    }
                 } else {
-                    reply = `No entendí tu respuesta 🤔\n\n${MENU_PRINCIPAL}`;
+                    reply = `No entendí tu respuesta 🤔\n\n${MENU_PRINCIPAL.text}`;
+                    buttons = MENU_PRINCIPAL.buttons;
                     nextStep = STEPS.STEP_1;
                 }
                 break;
@@ -241,18 +282,26 @@ async function handleChat(req, res) {
             case STEPS.STEP_SECTORES:
             case STEPS.STEP_FAQ:
                 if (isOption1) {
-                    reply = "¡Genial! Vamos a conectarte con un asesor 🙌\n\n¿Cuál es tu nombre?";
-                    nextStep = STEPS.STEP_LEAD_NOMBRE;
+                    const savedLead = await stateService.getLeadData(phone);
+                    if (savedLead && savedLead.nombre) {
+                        await stateService.setHumanMode(phone);
+                        await stateService.clearUserState(phone);
+                        reply = `¡Perfecto ${savedLead.nombre}! Un asesor tomará tu caso ahora. 🚀`;
+                        nextStep = null;
+                    } else {
+                        reply = "¡Genial! Vamos a conectarte con un asesor 🙌\n\n¿Cuál es tu nombre?";
+                        nextStep = STEPS.STEP_LEAD_NOMBRE;
+                    }
                 } else if (isOption2) {
-                    reply = MENU_PRINCIPAL;
+                    reply = MENU_PRINCIPAL.text;
+                    buttons = MENU_PRINCIPAL.buttons;
                     nextStep = STEPS.STEP_1;
                 } else {
-                    if (currentStep === STEPS.STEP_SERVICIOS)
-                        reply = "No entendí tu respuesta 🤔\n\n¿Agendamos una auditoría gratuita?\n1️⃣ Sí, agendar\n2️⃣ Volver";
-                    else if (currentStep === STEPS.STEP_SECTORES)
-                        reply = "No entendí tu respuesta 🤔\n\n¿Hablamos sobre tu negocio?\n1️⃣ Sí, hablar con asesor\n2️⃣ Volver";
-                    else if (currentStep === STEPS.STEP_FAQ)
-                        reply = "No entendí tu respuesta 🤔\n\n¿Agendamos una auditoría gratuita?\n1️⃣ Sí, agendar\n2️⃣ Volver";
+                    reply = "Por favor elige una opción válida:";
+                    buttons = [
+                        { id: "1", text: "✅ Sí, contactar" },
+                        { id: "2", text: "🔙 Volver" }
+                    ];
                     nextStep = currentStep;
                 }
                 break;
@@ -283,13 +332,14 @@ async function handleChat(req, res) {
 
                 if (isValidEmail(message_text)) {
                     lead.email = message_text;
-                    reply = "¡Casi listo! ¿En qué área específica necesitas más ayuda? 🚀\n\n" +
-                            "1️⃣ Control de ventas e inventario\n" +
-                            "2️⃣ Automatizar flujos de trabajo\n" +
-                            "3️⃣ Creación de Tableros (KPIs)\n" +
-                            "4️⃣ Chatbots y Asistentes\n" +
-                            "5️⃣ Otro distinto\n\n" +
-                            "*(Escribe *Volver* si quieres corregir tu correo)*";
+                    reply = "¡Casi listo! ¿En qué área específica necesitas más ayuda? 🚀";
+                    buttons = [
+                        { id: "1", text: "💰 Ventas/Inventario" },
+                        { id: "2", text: "⚡ Automatización" },
+                        { id: "3", text: "📊 KPIs/Tableros" },
+                        { id: "4", text: "🤖 Chatbots" },
+                        { id: "5", text: "❓ Otro" }
+                    ];
                     nextStep = STEPS.STEP_LEAD_DESAFIO;
                 } else {
                     reply = "Por favor ingresa un correo electrónico válido (ej: tucorreo@gmail.com)";
@@ -316,12 +366,14 @@ async function handleChat(req, res) {
                 else if (isOp4) lead.desafio = "Chatbots y Asistentes";
                 else if (isOp5) lead.desafio = "Otro distinto";
                 else {
-                    reply = "Por favor selecciona una opción válida (1 al 5) 👇\n\n" +
-                            "1️⃣ Control de ventas e inventario\n" +
-                            "2️⃣ Automatizar flujos de trabajo\n" +
-                            "3️⃣ Creación de Tableros (KPIs)\n" +
-                            "4️⃣ Chatbots y Asistentes\n" +
-                            "5️⃣ Otro distinto";
+                    reply = "Por favor selecciona una opción válida:";
+                    buttons = [
+                        { id: "1", text: "💰 Ventas/Inventario" },
+                        { id: "2", text: "⚡ Automatización" },
+                        { id: "3", text: "📊 KPIs/Tableros" },
+                        { id: "4", text: "🤖 Chatbots" },
+                        { id: "5", text: "❓ Otro" }
+                    ];
                     nextStep = STEPS.STEP_LEAD_DESAFIO;
                     break;
                 }
@@ -356,12 +408,11 @@ async function handleChat(req, res) {
 
                 if (slotIndex === -1 || !lead._slots || !lead._slots[slotIndex]) {
                     const slots = lead._slots
-                        ? lead._slots.map(iso => formatSlot(new Date(iso)))
+                        ? lead._slots.map(iso => new Date(iso))
                         : [];
-                    reply = "Por favor selecciona una opción válida:\n" +
-                        (slots.length > 0
-                            ? slots.map((s, i) => `${i+1}️⃣ ${s}`).join('\n')
-                            : "1️⃣, 2️⃣ o 3️⃣");
+                    const slotResp = buildSlotMessage(slots);
+                    reply = "Por favor elige una opción válida:\n" + slotResp.text;
+                    buttons = slotResp.buttons;
                     nextStep = STEPS.STEP_LEAD_SLOT;
                     break;
                 }
@@ -391,7 +442,8 @@ async function handleChat(req, res) {
             }
 
             default:
-                reply = MENU_PRINCIPAL;
+                reply = MENU_PRINCIPAL.text;
+                buttons = MENU_PRINCIPAL.buttons;
                 nextStep = STEPS.STEP_1;
                 break;
         }
@@ -401,6 +453,7 @@ async function handleChat(req, res) {
         }
 
         const responsePayload = { reply };
+        if (buttons && buttons.length > 0) responsePayload.buttons = buttons;
         if (responseLead) responsePayload.lead = responseLead;
         return res.json(responsePayload);
 
@@ -419,10 +472,11 @@ async function handleScheduledMenu(phone, input, currentState, res) {
     const isOption4 = input === '4' || input === '4.' || input === 'cuatro';
 
     if (isOption1) {
-        // Mostrar menú principal — guardar STEP_1 para que el usuario pueda navegar
+        // Mostrar menú principal
         await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_1, lead: {} });
         return res.json({ 
-            reply: "Entendido. Para cancelar tu cita escríbenos aquí mismo o selecciona una opción del menú.\n\n" + MENU_PRINCIPAL 
+            reply: "Entendido. Para cancelar tu cita escríbenos aquí mismo o selecciona una opción del menú.\n\n" + MENU_PRINCIPAL.text,
+            buttons: MENU_PRINCIPAL.buttons
         });
     }
 
@@ -433,11 +487,10 @@ async function handleScheduledMenu(phone, input, currentState, res) {
         lead._slots = slots.map(formatSlotISO);
         await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_REAGENDAR, lead });
 
+        const slotResp = buildSlotMessage(slots);
         return res.json({
-            reply:
-                "📅 *Reagendar mi cita*\n\n" +
-                "Estos son los próximos horarios disponibles:\n\n" +
-                buildSlotMessage(slots)
+            reply: "📅 *Reagendar mi cita*\n\nEstos son los próximos horarios disponibles:",
+            buttons: slotResp.buttons
         });
     }
 
@@ -445,7 +498,11 @@ async function handleScheduledMenu(phone, input, currentState, res) {
         // ¿Actualizar nombre/correo?
         await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_CONFIRM_UPDATE, lead: currentState.lead || {} });
         return res.json({
-            reply: "¿Deseas actualizar tu nombre y correo electrónico? 👤\n\n1️⃣ Sí, actualizar todo\n2️⃣ No, solo el nuevo reto"
+            reply: "¿Deseas actualizar tu nombre y correo electrónico? 👤",
+            buttons: [
+                { id: "1", text: "✅ Sí, actualizar" },
+                { id: "2", text: "❌ No, solo el reto" }
+            ]
         });
     }
 
@@ -460,11 +517,13 @@ async function handleScheduledMenu(phone, input, currentState, res) {
 
     // Opción no reconocida
     return res.json({
-        reply: "No entendí tu respuesta 🤔. Por favor elige una opción del menú:\n\n" +
-               "1️⃣ Ver menú principal\n" +
-               "2️⃣ Reagendar cita\n" +
-               "3️⃣ Actualizar datos / Nuevo reto\n" +
-               "4️⃣ Hablar con un asesor"
+        reply: "No entendí tu respuesta 🤔. Por favor elige una opción del menú:",
+        buttons: [
+            { id: "1", text: "🚀 Menú Principal" },
+            { id: "2", text: "📅 Reagendar cita" },
+            { id: "3", text: "📝 Actualizar datos" },
+            { id: "4", text: "👤 Hablar con asesor" }
+        ]
     });
 }
 
@@ -482,18 +541,23 @@ async function handleConfirmUpdate(phone, input, currentState, res) {
         // Ir directo al desafío (reto)
         await stateService.saveUserState(phone, { step: stateService.STEPS.STEP_LEAD_DESAFIO, lead: currentState.lead || {} });
         return res.json({
-            reply: "Entendido, mantenemos los datos actuales. ✅\n\n¿En qué área específica necesitas más ayuda hoy? 🚀\n\n" +
-                   "1️⃣ Control de ventas e inventario\n" +
-                   "2️⃣ Automatizar flujos de trabajo\n" +
-                   "3️⃣ Creación de Tableros (KPIs)\n" +
-                   "4️⃣ Chatbots y Asistentes\n" +
-                   "5️⃣ Otro distinto\n\n" +
-                   "*(Escribe *Volver* si quieres cambiar de opinión y actualizar tu nombre/correo)*"
+            reply: "Entendido, mantenemos los datos actuales. ✅\n\n¿En qué área específica necesitas más ayuda hoy? 🚀",
+            buttons: [
+                { id: "1", text: "💰 Ventas/Inventario" },
+                { id: "2", text: "⚡ Automatización" },
+                { id: "3", text: "📊 KPIs/Tableros" },
+                { id: "4", text: "🤖 Chatbots" },
+                { id: "5", text: "❓ Otro" }
+            ]
         });
     }
 
     return res.json({
-        reply: "Por favor selecciona una opción válida:\n1️⃣ Sí, actualizar nombre/correo\n2️⃣ No, solo el nuevo reto"
+        reply: "Por favor selecciona una opción válida:",
+        buttons: [
+            { id: "1", text: "✅ Sí, actualizar" },
+            { id: "2", text: "❌ No, solo el reto" }
+        ]
     });
 }
 
@@ -509,9 +573,10 @@ async function handleReagendar(phone, input, currentState, res) {
         const slots = lead._slots
             ? lead._slots.map(iso => formatSlot(new Date(iso)))
             : [];
+        const slotResp = buildSlotMessage(lead._slots ? lead._slots.map(iso => new Date(iso)) : []);
         return res.json({
-            reply: "Por favor selecciona una opción válida:\n" +
-                (slots.length > 0 ? slots.map((s, i) => `${i+1}️⃣ ${s}`).join('\n') : "1️⃣, 2️⃣ o 3️⃣")
+            reply: "Por favor selecciona una opción válida:",
+            buttons: slotResp.buttons
         });
     }
 
