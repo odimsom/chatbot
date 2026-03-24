@@ -407,7 +407,9 @@ async function handleChat(req, res) {
                     const slots = generateSlots(3);
                     lead._slots = slots.map(formatSlotISO); // guardar en estado para usarlos después
 
-                    reply = buildSlotMessage(slots);
+                    const slotResp = buildSlotMessage(slots);
+                    reply = slotResp.text;
+                    buttons = slotResp.buttons;
                     nextStep = STEPS.STEP_LEAD_SLOT;
                 }
                 break;
@@ -580,12 +582,9 @@ async function handleReagendar(phone, input, currentState, res) {
     const slotIndex = isOption1 ? 0 : isOption2 ? 1 : isOption3 ? 2 : -1;
 
     if (slotIndex === -1 || !lead._slots || !lead._slots[slotIndex]) {
-        const slots = lead._slots
-            ? lead._slots.map(iso => formatSlot(new Date(iso)))
-            : [];
         const slotResp = buildSlotMessage(lead._slots ? lead._slots.map(iso => new Date(iso)) : []);
         return res.json({
-            reply: "Por favor selecciona una opción válida:",
+            reply: "Por favor selecciona una opción válida:\n\n" + slotResp.text,
             buttons: slotResp.buttons
         });
     }
