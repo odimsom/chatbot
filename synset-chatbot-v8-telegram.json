@@ -81,6 +81,10 @@
             {
               "name": "isGroupMention",
               "value": "={{ $json.isGroupMention || false }}"
+            },
+            {
+              "name": "source",
+              "value": "={{ $json.source || \"whatsapp\" }}"
             }
           ]
         },
@@ -139,7 +143,7 @@
             },
             {
               "name": "chatId",
-              "value": "={{ $('Filtrar y Normalizar').item.json.phone }}"
+              "value": "={{ $json.phone }}"
             },
             {
               "name": "text",
@@ -426,7 +430,7 @@
         "url": "https://api.telegram.org/bot8777787094:AAHihy3ExiYVGJI0pl93cJK8oFkUCwz9v_o/sendMessage",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ chat_id: String($('Normalizar Telegram').item.json.phone).replace('tg_', ''), text: $json.reply, parse_mode: 'Markdown', ...($json.buttons && $json.buttons.length > 0 ? { reply_markup: { inline_keyboard: $json.buttons.map(b => [{ text: b.text, callback_data: String(b.id) }]) } } : {}) }) }}",
+        "jsonBody": "={{ JSON.stringify({ chat_id: String($json.phone).replace('tg_', ''), text: $json.reply, parse_mode: 'Markdown', ...($json.buttons && $json.buttons.length > 0 ? { reply_markup: { inline_keyboard: $json.buttons.map(b => [{ text: b.text, callback_data: String(b.id) }]) } } : {}) }) }}",
         "options": {}
       },
       "name": "Enviar Telegram API",

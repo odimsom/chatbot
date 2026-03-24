@@ -467,7 +467,7 @@ async function handleChat(req, res) {
             await stateService.saveUserState(phone, { step: nextStep, lead });
         }
 
-        const responsePayload = { reply, source: req.body.source || 'whatsapp' };
+        const responsePayload = { reply, phone, source: req.body.source || 'whatsapp' };
         if (responseLead) {
             responseLead.source = req.body.source || 'whatsapp';
             responsePayload.lead = responseLead;
