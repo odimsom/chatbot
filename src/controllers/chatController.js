@@ -123,14 +123,20 @@ async function handleChat(req, res) {
     const isTelegram = req.body.source && req.body.source === 'telegram';
 
     // Interceptor global para convertir botones a texto (Bypass restricción de Meta en NOWEB)
+    // y asegurar que siempre devolvamos el phone y context de enrutamiento
     const originalJson = res.json.bind(res);
     res.json = (data) => {
-        // Solo eliminamos los botones si NO es Telegram (Telegram soporta botones nativos elegantes)
-        if (!isTelegram && data && data.buttons && data.buttons.length > 0) {
-            const numMap = { "1": "1️⃣", "2": "2️⃣", "3": "3️⃣", "4": "4️⃣", "5": "5️⃣", "6": "6️⃣" };
-            const blist = data.buttons.map(b => `${numMap[b.id] || (b.id + '.')} ${b.text}`).join('\n');
-            data.reply = `${data.reply}\n\n*(Responde con el número de la opción)*\n${blist}`;
-            delete data.buttons; // Eliminar la key hace que n8n vaya por la rama 'False' de 'Tiene botones?'
+        if (data && typeof data === 'object') {
+            data.source = req.body.source || 'whatsapp';
+            data.phone = req.body.phone || null;
+            
+            // Solo eliminamos los botones si NO es Telegram (Telegram soporta botones nativos elegantes)
+            if (!isTelegram && data.buttons && data.buttons.length > 0) {
+                const numMap = { "1": "1️⃣", "2": "2️⃣", "3": "3️⃣", "4": "4️⃣", "5": "5️⃣", "6": "6️⃣" };
+                const blist = data.buttons.map(b => `${numMap[b.id] || (b.id + '.')} ${b.text}`).join('\n');
+                data.reply = `${data.reply}\n\n*(Responde con el número de la opción)*\n${blist}`;
+                delete data.buttons; // Eliminar la key
+            }
         }
         return originalJson(data);
     };
@@ -468,6 +474,7 @@ async function handleChat(req, res) {
         }
 
         const responsePayload = { reply, phone, source: req.body.source || 'whatsapp' };
+        if (buttons && buttons.length > 0) responsePayload.buttons = buttons;
         if (responseLead) {
             responseLead.source = req.body.source || 'whatsapp';
             responsePayload.lead = responseLead;
