@@ -126,55 +126,6 @@
     },
     {
       "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict"
-          },
-          "conditions": [
-            {
-              "id": "button-check",
-              "leftValue": "={{ Array.isArray($json.buttons) && $json.buttons.length > 0 }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        }
-      },
-      "name": "Tiene botones?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
-      "position": [
-        1100,
-        180
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://wahan8n.synsetsolutions.com/api/sendButtons",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"session\": \"default\",\n  \"chatId\": \"{{ $('Filtrar y Normalizar').item.json.phone }}\",\n  \"body\": {{ JSON.stringify($json.reply) }},\n  \"footer\": \"\",\n  \"buttons\": {{ JSON.stringify($json.buttons.map(b => ({ type: 'reply', id: String(b.id), text: b.text }))) }}\n}",
-        "options": {}
-      },
-      "name": "Enviar Botones WAHA",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 3,
-      "position": [
-        1320,
-        80
-      ]
-    },
-    {
-      "parameters": {
         "method": "POST",
         "url": "https://wahan8n.synsetsolutions.com/api/sendText",
         "authentication": "genericCredentialType",
@@ -566,24 +517,6 @@
         ]
       ]
     },
-    "Tiene botones?": {
-      "main": [
-        [
-          {
-            "node": "Enviar Botones WAHA",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Enviar Texto WAHA",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Hay lead?": {
       "main": [
         [
@@ -701,17 +634,6 @@
         ]
       ]
     },
-    "Enviar Botones WAHA": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Enviar Texto WAHA": {
       "main": [
         [
@@ -756,7 +678,7 @@
         ],
         [
           {
-            "node": "Tiene botones?",
+            "node": "Enviar Texto WAHA",
             "type": "main",
             "index": 0
           }
