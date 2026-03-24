@@ -11,7 +11,10 @@
       "name": "Webhook WAHA",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [220, 300]
+      "position": [
+        220,
+        300
+      ]
     },
     {
       "parameters": {
@@ -23,7 +26,10 @@
       "name": "Webhook Landing",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [220, 560]
+      "position": [
+        220,
+        560
+      ]
     },
     {
       "parameters": {
@@ -32,7 +38,10 @@
       "name": "Filtrar y Normalizar",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 300]
+      "position": [
+        440,
+        300
+      ]
     },
     {
       "parameters": {
@@ -41,7 +50,10 @@
       "name": "Normalizar Lead Landing",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [440, 560]
+      "position": [
+        440,
+        560
+      ]
     },
     {
       "parameters": {
@@ -50,11 +62,26 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "phone", "value": "={{ $json.phone }}" },
-            { "name": "message", "value": "={{ $json.message }}" },
-            { "name": "fromMe", "value": "={{ $json.fromMe }}" },
-            { "name": "messageId", "value": "={{ $json.messageId }}" },
-            { "name": "isGroupMention", "value": "={{ $json.isGroupMention || false }}" }
+            {
+              "name": "phone",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "fromMe",
+              "value": "={{ $json.fromMe }}"
+            },
+            {
+              "name": "messageId",
+              "value": "={{ $json.messageId }}"
+            },
+            {
+              "name": "isGroupMention",
+              "value": "={{ $json.isGroupMention || false }}"
+            }
           ]
         },
         "options": {}
@@ -62,7 +89,10 @@
       "name": "Chatbot API",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [660, 300]
+      "position": [
+        660,
+        300
+      ]
     },
     {
       "parameters": {
@@ -77,7 +107,10 @@
               "id": "reply-check",
               "leftValue": "={{ $json.reply !== null && $json.reply !== undefined && $json.reply !== '' }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ],
           "combinator": "and"
@@ -86,7 +119,10 @@
       "name": "Tiene reply?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [880, 300]
+      "position": [
+        880,
+        300
+      ]
     },
     {
       "parameters": {
@@ -101,7 +137,10 @@
               "id": "button-check",
               "leftValue": "={{ Array.isArray($json.buttons) && $json.buttons.length > 0 }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ],
           "combinator": "and"
@@ -110,7 +149,10 @@
       "name": "Tiene botones?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1100, 180]
+      "position": [
+        1100,
+        180
+      ]
     },
     {
       "parameters": {
@@ -120,13 +162,16 @@
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({ session: 'default', chatId: $('Filtrar y Normalizar').item.json.phone, body: $json.reply, buttons: $json.buttons.map(b => ({ type: 'reply', id: b.id.toString(), text: b.text })) }) }}",
+        "jsonBody": "={\n  \"session\": \"default\",\n  \"chatId\": \"{{ $('Filtrar y Normalizar').item.json.phone }}\",\n  \"body\": {{ JSON.stringify($json.reply) }},\n  \"footer\": \"\",\n  \"buttons\": {{ JSON.stringify($json.buttons.map(b => ({ type: 'reply', id: String(b.id), text: b.text }))) }}\n}",
         "options": {}
       },
       "name": "Enviar Botones WAHA",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [1320, 80]
+      "position": [
+        1320,
+        80
+      ]
     },
     {
       "parameters": {
@@ -137,9 +182,18 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "session", "value": "default" },
-            { "name": "chatId", "value": "={{ $('Filtrar y Normalizar').item.json.phone }}" },
-            { "name": "text", "value": "={{ $json.reply }}" }
+            {
+              "name": "session",
+              "value": "default"
+            },
+            {
+              "name": "chatId",
+              "value": "={{ $('Filtrar y Normalizar').item.json.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $json.reply }}"
+            }
           ]
         },
         "options": {}
@@ -147,7 +201,10 @@
       "name": "Enviar Texto WAHA",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [1320, 280]
+      "position": [
+        1320,
+        280
+      ]
     },
     {
       "parameters": {
@@ -162,7 +219,10 @@
               "id": "lead-check",
               "leftValue": "={{ $json.lead !== null && $json.lead !== undefined }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
             }
           ],
           "combinator": "and"
@@ -171,7 +231,10 @@
       "name": "Hay lead?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1100, 420]
+      "position": [
+        1100,
+        420
+      ]
     },
     {
       "parameters": {
@@ -180,7 +243,10 @@
       "name": "Calcular Slot",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1320, 420]
+      "position": [
+        1320,
+        420
+      ]
     },
     {
       "parameters": {
@@ -191,7 +257,10 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "Content-Type", "value": "text/calendar; charset=utf-8" }
+            {
+              "name": "Content-Type",
+              "value": "text/calendar; charset=utf-8"
+            }
           ]
         },
         "sendBody": true,
@@ -203,7 +272,10 @@
       "name": "Crear Evento CalDAV",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [1540, 420]
+      "position": [
+        1540,
+        420
+      ]
     },
     {
       "parameters": {
@@ -218,7 +290,10 @@
               "id": "source-check",
               "leftValue": "={{ $('Calcular Slot').item.json.lead.source }}",
               "rightValue": "web",
-              "operator": { "type": "string", "operation": "notEquals" }
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
             }
           ],
           "combinator": "and"
@@ -227,7 +302,10 @@
       "name": "Es WhatsApp?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [1760, 300]
+      "position": [
+        1760,
+        300
+      ]
     },
     {
       "parameters": {
@@ -238,9 +316,18 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "session", "value": "default" },
-            { "name": "chatId", "value": "={{ $('Calcular Slot').item.json.lead.phone }}" },
-            { "name": "text", "value": "=📅 *¡Cita confirmada, {{ $('Calcular Slot').item.json.lead.nombre }}!*\n\nTu auditoría gratuita está agendada para:\n🗓️ {{ $('Calcular Slot').item.json.fechaTexto }}\n⏱️ Duración: 1 hora\n📍 Videollamada remota\n\nTe contactaremos al {{ $('Calcular Slot').item.json.phoneDisplay }} o a {{ $('Calcular Slot').item.json.lead.email }}\n\n¡Nos vemos pronto! 🚀 *Synset Solutions*" }
+            {
+              "name": "session",
+              "value": "default"
+            },
+            {
+              "name": "chatId",
+              "value": "={{ $('Calcular Slot').item.json.lead.phone }}"
+            },
+            {
+              "name": "text",
+              "value": "=📅 *¡Cita confirmada, {{ $('Calcular Slot').item.json.lead.nombre }}!*\n\nTu auditoría gratuita está agendada para:\n🗓️ {{ $('Calcular Slot').item.json.fechaTexto }}\n⏱️ Duración: 1 hora\n📍 Videollamada remota\n\nTe contactaremos al {{ $('Calcular Slot').item.json.phoneDisplay }} o a {{ $('Calcular Slot').item.json.lead.email }}\n\n¡Nos vemos pronto! 🚀 *Synset Solutions*"
+            }
           ]
         },
         "options": {}
@@ -248,7 +335,10 @@
       "name": "Confirmar WhatsApp Cliente",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [1980, 180]
+      "position": [
+        1980,
+        180
+      ]
     },
     {
       "parameters": {
@@ -259,9 +349,18 @@
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
-            { "name": "session", "value": "default" },
-            { "name": "chatId", "value": "18296932458@c.us" },
-            { "name": "text", "value": "=🔔 *Nuevo Lead Agendado - Synset Solutions*\n\n👤 {{ $('Calcular Slot').item.json.lead.nombre }}\n📱 {{ $('Calcular Slot').item.json.phoneDisplay }}\n📧 {{ $('Calcular Slot').item.json.lead.email }}\n💼 {{ $('Calcular Slot').item.json.lead.desafio }}\n📌 Fuente: {{ $('Calcular Slot').item.json.lead.source === 'web' ? 'Landing Web' : 'WhatsApp' }}\n\n📅 Cita: {{ $('Calcular Slot').item.json.fechaTexto }}\n✅ Evento creado en Nextcloud Calendar\n\n⏸️ Bot en pausa 24h.\nPara tomar control:\n{ \"command\": \"!humano\", \"phone\": \"{{ $('Calcular Slot').item.json.lead.phone }}\" }" }
+            {
+              "name": "session",
+              "value": "default"
+            },
+            {
+              "name": "chatId",
+              "value": "18296932458@c.us"
+            },
+            {
+              "name": "text",
+              "value": "=🔔 *Nuevo Lead Agendado - Synset Solutions*\n\n👤 {{ $('Calcular Slot').item.json.lead.nombre }}\n📱 {{ $('Calcular Slot').item.json.phoneDisplay }}\n📧 {{ $('Calcular Slot').item.json.lead.email }}\n💼 {{ $('Calcular Slot').item.json.lead.desafio }}\n📌 Fuente: {{ $('Calcular Slot').item.json.lead.source === 'web' ? 'Landing Web' : 'WhatsApp' }}\n\n📅 Cita: {{ $('Calcular Slot').item.json.fechaTexto }}\n✅ Evento creado en Nextcloud Calendar\n\n⏸️ Bot en pausa 24h.\nPara tomar control:\n{ \"command\": \"!humano\", \"phone\": \"{{ $('Calcular Slot').item.json.lead.phone }}\" }"
+            }
           ]
         },
         "options": {}
@@ -269,7 +368,10 @@
       "name": "Notificar Asesor WhatsApp",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 3,
-      "position": [1980, 420]
+      "position": [
+        1980,
+        420
+      ]
     },
     {
       "parameters": {
@@ -281,7 +383,10 @@
       "name": "Email Asesor",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2,
-      "position": [1980, 620]
+      "position": [
+        1980,
+        620
+      ]
     },
     {
       "parameters": {
@@ -293,7 +398,10 @@
       "name": "Email Cliente",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2,
-      "position": [1980, 820]
+      "position": [
+        1980,
+        820
+      ]
     },
     {
       "parameters": {
@@ -303,80 +411,247 @@
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [2200, 1000]
+      "position": [
+        2200,
+        1000
+      ]
     }
   ],
   "connections": {
     "Webhook WAHA": {
-      "main": [[{ "node": "Filtrar y Normalizar", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Filtrar y Normalizar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Webhook Landing": {
-      "main": [[{ "node": "Normalizar Lead Landing", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Normalizar Lead Landing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Filtrar y Normalizar": {
-      "main": [[{ "node": "Chatbot API", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Chatbot API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Normalizar Lead Landing": {
-      "main": [[{ "node": "Calcular Slot", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Calcular Slot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Chatbot API": {
-      "main": [[{ "node": "Tiene reply?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Tiene reply?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Tiene reply?": {
       "main": [
         [
-          { "node": "Tiene botones?", "type": "main", "index": 0 },
-          { "node": "Hay lead?", "type": "main", "index": 0 }
+          {
+            "node": "Tiene botones?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Hay lead?",
+            "type": "main",
+            "index": 0
+          }
         ],
-        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Tiene botones?": {
       "main": [
-        [{ "node": "Enviar Botones WAHA", "type": "main", "index": 0 }],
-        [{ "node": "Enviar Texto WAHA", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Enviar Botones WAHA",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Enviar Texto WAHA",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Hay lead?": {
       "main": [
-        [{ "node": "Calcular Slot", "type": "main", "index": 0 }],
-        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Calcular Slot",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Calcular Slot": {
-      "main": [[{ "node": "Crear Evento CalDAV", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Crear Evento CalDAV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Crear Evento CalDAV": {
-      "main": [[
-        { "node": "Es WhatsApp?", "type": "main", "index": 0 },
-        { "node": "Notificar Asesor WhatsApp", "type": "main", "index": 0 },
-        { "node": "Email Asesor", "type": "main", "index": 0 },
-        { "node": "Email Cliente", "type": "main", "index": 0 }
-      ]]
+      "main": [
+        [
+          {
+            "node": "Es WhatsApp?",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notificar Asesor WhatsApp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email Asesor",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Email Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Es WhatsApp?": {
       "main": [
-        [{ "node": "Confirmar WhatsApp Cliente", "type": "main", "index": 0 }],
-        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Confirmar WhatsApp Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Confirmar WhatsApp Cliente": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Notificar Asesor WhatsApp": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Email Asesor": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Email Cliente": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Enviar Botones WAHA": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Enviar Texto WAHA": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   }
 }

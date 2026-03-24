@@ -120,6 +120,18 @@ async function sendLeadWebhook(phone, lead) {
 }
 
 async function handleChat(req, res) {
+    // Interceptor global para convertir botones a texto (Bypass restricción de Meta en NOWEB)
+    const originalJson = res.json.bind(res);
+    res.json = (data) => {
+        if (data && data.buttons && data.buttons.length > 0) {
+            const numMap = { "1": "1️⃣", "2": "2️⃣", "3": "3️⃣", "4": "4️⃣", "5": "5️⃣", "6": "6️⃣" };
+            const blist = data.buttons.map(b => `${numMap[b.id] || (b.id + '.')} ${b.text}`).join('\n');
+            data.reply = `${data.reply}\n\n*(Responde con el número de la opción)*\n${blist}`;
+            delete data.buttons; // Eliminar la key hace que n8n vaya por la rama 'False' de 'Tiene botones?'
+        }
+        return originalJson(data);
+    };
+
     try {
         const { phone, message, fromMe, messageId } = req.body;
 
